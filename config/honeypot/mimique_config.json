@@ -1,0 +1,26 @@
+{
+  "name": "MimiQue AI Honeypot",
+  "version": "1.0",
+  "llm": {
+    "provider": "ollama",
+    "model": "llama3.1:8b",
+    "temperature": 0.7,
+    "max_tokens": 500
+  },
+  "services": [
+    { "name": "web",     "port": 80,  "protocol": "http",  "responses": "dynamic" },
+    { "name": "web-ssl", "port": 443, "protocol": "https", "responses": "dynamic" },
+    { "name": "ssh",     "port": 22,  "protocol": "ssh",   "banner": "OpenSSH_8.2p1 Ubuntu-4ubuntu0.5" },
+    { "name": "ftp",     "port": 21,  "protocol": "ftp",   "banner": "vsFTPd 3.0.3" }
+  ],
+  "analysis": {
+    "enabled": true,
+    "extract_iocs": true,
+    "fingerprint_attackers": true,
+    "store_pcaps": false
+  },
+  "countermeasures": {
+    "enabled": false,
+    "types": ["traceback", "beacon", "poison"]
+  }
+}

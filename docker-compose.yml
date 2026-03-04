@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sentinel-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: sentinel-postgres
+    environment:
+      POSTGRES_DB: sentinel
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinel-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgres://sentinel:${DB_PASSWORD:-changeme}@postgres:5432/sentinel
+      - REDIS_URL=redis://redis:6379
+      - TEP_ENABLED=true
+      - TEP_PORT=8085
+    volumes:
+      - ./config:/app/config:ro
+      - ./modules:/app/modules:ro
+      - ./data:/app/data
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sentinel-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://backend:8080
+      - VITE_TEP_WS_URL=ws://backend:8085
+    depends_on:
+      - backend
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  honeypot:
+    build:
+      context: ./modules/honeypot-ai
+      dockerfile: Dockerfile
+    container_name: sentinel-honeypot
+    ports:
+      - "8081:8080"
+      - "8443:8443"
+    volumes:
+      - ./config/honeypot:/config:ro
+      - honeypot-data:/data
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  deepfake-detector:
+    build:
+      context: ./modules/deepfake
+      dockerfile: Dockerfile
+    container_name: sentinel-deepfake
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  tep-gateway:
+    build:
+      context: ./modules/tep-protocol
+      dockerfile: Dockerfile
+    container_name: sentinel-tep
+    ports:
+      - "8085:8085"
+      - "8086:8086/udp"
+    environment:
+      - TEP_MODE=gateway
+      - TEP_NETWORK_INTERFACE=eth0
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sentinel-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sentinel-grafana
+    ports:
+      - "3030:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./config/grafana-dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+networks:
+  sentinel-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+  honeypot-data:
+  prometheus-data:
+  grafana-data:

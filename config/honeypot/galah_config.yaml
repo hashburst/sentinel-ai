@@ -1,0 +1,57 @@
+version: "1.0"
+name: "SentinelAI-Honeypot"
+
+llm:
+  provider: "ollama"
+  model: "llama3.1:8b"
+  url: "http://localhost:11434"
+  timeout_seconds: 10
+
+cache:
+  type: "redis"
+  url: "redis://redis:6379"
+  ttl: 86400
+
+ports:
+  http: 8080
+  https: 8443
+  additional: [21, 22, 23, 25, 3306, 3389, 5432, 6379]
+
+logging:
+  format: "json"
+  output: "/data/access.log"
+  level: "info"
+
+triggers:
+  - pattern: ".*/\\.git/.*"
+    response: "simulate_git_directory"
+  - pattern: ".*(union|select|insert|delete|drop).*"
+    response: "simulate_sql_error"
+  - pattern: ".*(admin|administrator|root).*"
+    response: "simulate_login_panel"
+  - pattern: ".*(phpmyadmin|wp-admin|wp-content).*"
+    response: "simulate_wordpress"
+
+deception_data:
+  files:
+    - name: "passwords.xlsx"
+      size: "2.4MB"
+      content_type: "fake_creds"
+    - name: "vpn_config.ovpn"
+      size: "12KB"
+      content_type: "fake_config"
+    - name: "ssh_private.key"
+      size: "3KB"
+      content_type: "fake_key"
+
+offensive_mode:
+  enabled: false
+
+integration:
+  xdr:
+    enabled: true
+    endpoint: "http://xdr-bitcorp.local:8080/api/v1/alerts"
+    api_key: "${XDR_API_KEY}"
+  tep:
+    enabled: true
+    endpoint: "http://tep-gateway:8085/api/v1/commands"

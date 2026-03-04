@@ -1,0 +1,23 @@
+[package]
+name = "tep-protocol"
+version = "0.1.0"
+edition = "2021"
+authors = ["Gabriele Pegoraro", "BitCorp"]
+license = "MIT"
+description = "TEP (Telecommunications Encryption Protocol) - IoT/Drone/Satellite"
+
+[dependencies]
+tokio = { version = "1.34", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+hex = "0.4"
+sha2 = "0.10"
+hmac = "0.12"
+aes-gcm = "0.10"
+rand = "0.8"
+chrono = "0.4"
+uuid = { version = "1.5", features = ["v4", "serde"] }
+base64 = "0.21"
+thiserror = "1.0"
+tracing = "0.1"
+futures = "0.3"

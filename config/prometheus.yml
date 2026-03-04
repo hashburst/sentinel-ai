@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "sentinel-backend"
+    static_configs:
+      - targets: ["backend:8080"]
+    metrics_path: "/metrics"
+
+  - job_name: "sentinel-honeypot"
+    static_configs:
+      - targets: ["honeypot:8080"]
+    metrics_path: "/metrics"
+
+  - job_name: "sentinel-deepfake"
+    static_configs:
+      - targets: ["deepfake-detector:5000"]
+    metrics_path: "/metrics"
+
+  - job_name: "sentinel-tep"
+    static_configs:
+      - targets: ["tep-gateway:8085"]
+    metrics_path: "/metrics"
